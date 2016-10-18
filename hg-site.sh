@@ -4,7 +4,7 @@ ROOT_DIR=`pwd`
 SITE_NAME='Code'
 DOMAIN_NAME='basename $ROOT_DIR'
 
-while getopts ":d:n:h:" opt; do
+while getopts ":d:n:r:" opt; do
   case $opt in
     r)
       ROOT_DIR=$OPTARG
@@ -47,9 +47,17 @@ function header
 
   </head>
   <body>
-  <div class="page-header">
-      <h1>$TITLE</h1>
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">$SITE_NAME</a>
+    </div>
+    <div class="collapse navbar-collapse"> <p class="navbar-text">$TITLE</p></div>
   </div>
+</nav>
+
 EOF
 
 }
@@ -130,7 +138,6 @@ function folderContent
     
     cat << EOF
     <ol class="breadcrumb">
-  		<li><a href="/">$SITE_NAME</a></li>
   		<li><a href="/$project/">$project</a></li>
   		<li><a href="/$project/src">source</a></li>
 EOF
@@ -138,7 +145,7 @@ EOF
     for path in `pathSegments $name`; do
 	href=$href$path/
 	cat << EOF
-	    <li class="active"><a href="/$project/$href">$path</a></li>
+	    <li class="active"><a href="/$project/src/$href">$path</a></li>
 EOF
     done
     cat << EOF
@@ -152,17 +159,7 @@ EOF
 </ul>
 EOF
 
-	if	[ -f $dir/README ]; then
-		cat << EOF
-<div class="panel panel-default">
-  <div class="panel-body">
-EOF
-    	cat $dir/README
-		cat << EOF
-  </div>
-</div>
-EOF
-	fi
+
 	
     cat << EOF
 <table class="table"><tr><th>Name</th><th>User</th><th>Date</th><th>Summary</th><th>Tag</th></tr>
@@ -180,6 +177,19 @@ EOF
 		hg log -l 1 -R $ROOT_DIR/$project/raw --template '<td>{author}</td><td>{date|isodate}</td><td>{desc}</td><td>{tags}</td></tr>' $dir/$f
 	done
     echo "</table>"
+
+	# Show README-File
+	if	[ -f $dir/README ]; then
+		cat << EOF
+<div class="panel panel-default">
+  <div class="panel-body">
+EOF
+    	cat $dir/README
+		cat << EOF
+  </div>
+</div>
+EOF
+	fi
     
     footer
 }
@@ -204,7 +214,6 @@ function folderHistory
     
     cat << EOF
     <ol class="breadcrumb">
-  		<li><a href="/">$SITE_NAME</a></li>
   		<li><a href="/$project/">$project</a></li>
   		<li><a href="/$project/src">source</a></li>
 EOF
@@ -212,7 +221,7 @@ EOF
     for path in `pathSegments $name`; do
 	href=$href$path/
 	cat << EOF
-	    <li class="active"><a href="/$project/$href">$path</a></li>
+	    <li class="active"><a href="/$project/src/$href">$path</a></li>
 EOF
     done
     cat << EOF
@@ -260,7 +269,6 @@ function fileContent
 
     cat << EOF
     <ol class="breadcrumb">
-  		<li><a href="/">$SITE_NAME</a></li>
   		<li><a href="/$project/">$project</a></li>
   		<li><a href="/$project/src">source</a></li>
 EOF
@@ -306,7 +314,6 @@ function fileHistory
 
     cat << EOF
     <ol class="breadcrumb">
-  		<li><a href="/">$SITE_NAME</a></li>
   		<li><a href="/$project/">$project</a></li>
   		<li><a href="/$project/src">source</a></li>
 EOF
@@ -369,7 +376,6 @@ function commit
     
     cat << EOF
     <ol class="breadcrumb">
-  		<li><a href="/">$SITE_NAME</a></li>
   		<li><a href="../">$project</a></li>
   		<li class="active">Commit $commit</li>
 	</ol>
@@ -394,19 +400,32 @@ function projectSummary
 
     cat << EOF
     <ol class="breadcrumb">
-  		<li><a href="/">$SITE_NAME</a></li>
   		<li class="active">$project</li>
 	</ol>
 EOF
     
 cat << EOF
-<ul class="list-group">
-<li class="list-group-item">hg clone http://$DOMAIN/$project</li>
-<li class="list-group-item"><a href="/$project/$project.tar.gz">Download Tarball</a></li>
-<li class="list-group-item"><a href="/$project/changelog.txt">Changelog</a></li>
-<li class="list-group-item"><a href="/$project/src/">Source</a></li>
+
+<div class="well">Clone this repository with <code>hg clone http://$DOMAIN/$project</code></div>
+<ul class="nav nav-pills nav-stacked">
+<li role="presentation"><a href="/$project/$project.tar.gz">Download Tarball</a></li>
+<li role="presentation"><a href="/$project/changelog.txt">Changelog</a></li>
+<li role="presentation"><a href="/$project/src/">Source</a></li>
 </li>
 EOF
+
+	if	[ -f $ROOT_DIR/$project/raw/README ]; then
+		cat << EOF
+<div class="panel panel-default">
+  <div class="panel-body">
+EOF
+    	cat $ROOT_DIR/$project/raw/README
+		cat << EOF
+  </div>
+</div>
+EOF
+	fi
+
     footer
 }
 
@@ -478,7 +497,7 @@ rm $ROOT_DIR/.htaccess
 echo "# generated" > $ROOT_DIR/.htaccess
 
 # Loop over all projects
-for f in ./*; do
+for f in $ROOT_DIR/*; do
 
 	project=`basename $f`
 	
