@@ -439,10 +439,11 @@ function project
 
     if	[ -f $dir/$name.tar.gz ]; then
         if	[ `hg log -R $dir -l 1 --template '{date(date,"%s")}'` -lt `stat -c "%Y" $dir/$name.tar.gz ` ]; then
-	    echo "$name is actual"
+	    #echo "$name is actual"
 	    continue;
 	fi
     fi
+    echo "Code-project $name has changed, now updating."
 
 
     rm -rf $dir/raw
