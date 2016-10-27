@@ -1,13 +1,17 @@
 #!/bin/bash
 
-ROOT_DIR=`pwd`
-SITE_NAME='Code'
-DOMAIN_NAME='basename $ROOT_DIR'
+REPO_DIR=`pwd`
+OUT_DIR=`pwd`
+SITE_NAME=`basename $REPO_DIR`
+DOMAIN_NAME=`basename $OUT_DIR`
 
-while getopts ":d:n:r:" opt; do
+while getopts ":d:n:R:o:" opt; do
   case $opt in
-    r)
-      ROOT_DIR=$OPTARG
+    R)
+      REPO_DIR=$OPTARG
+      ;;
+    o)
+      OUT_DIR=$OPTARG
       ;;
     n)
       SITE_NAME=$OPTARG
@@ -90,12 +94,12 @@ function rootIndex
 	</ol>
 EOF
 
-	if	[ -f $ROOT_DIR/README ]; then
+	if	[ -f $REPO_DIR/README ]; then
 		cat << EOF
 <div class="panel panel-default">
   <div class="panel-body">
 EOF
-    	cat $ROOT_DIR/README
+    	cat $REPO_DIR/README
 		cat << EOF
   </div>
 </div>
@@ -105,7 +109,7 @@ EOF
     cat << EOF
 <table class="table"><tr><th>Repository</th><th>User</th><th>Date</th><th>Summary</th><th>Tag</th></tr>
 EOF
-    for repo in $ROOT_DIR/*; do
+    for repo in $REPO_DIR/*; do
 	name=`basename $repo`
 	if [ ! -d $repo/.hg ]; then
 	    continue;
@@ -126,7 +130,7 @@ function folderContent
 {
 	local project=$1
 	local name=$2
-	local dir=$ROOT_DIR/$project/raw/$name
+	local dir=$OUT_DIR/$project/raw/$name
 	local path
 	if [ $name == '.' ]; then
 	    title="source"
@@ -174,7 +178,7 @@ EOF
 		fi
 		
 		echo "<tr><td><a href="$link">$f</a></td>"
-		hg log -l 1 -R $ROOT_DIR/$project/raw --template '<td>{author}</td><td>{date|isodate}</td><td>{desc}</td><td>{tags}</td></tr>' $dir/$f
+		hg log -l 1 -R $REPO_DIR/$project --template '<td>{author}</td><td>{date|isodate}</td><td>{desc}</td><td>{tags}</td></tr>' $REPO_DIR/$project/$name/$f
 	done
     echo "</table>"
 
@@ -201,7 +205,7 @@ function folderHistory
 {
 	local project=$1
 	local name=$2
-	local dir=$ROOT_DIR/$project/raw/$name
+	local dir=$REPO_DIR/$project/$name
 	local path
 
 	if [ $name == '.' ]; then
@@ -250,7 +254,7 @@ EOF
     cat << EOF
 <table class="table"><tr><th>Commit</th><th>User</th><th>Date</th><th>Summary</th><th>Tag</th></tr>
 EOF
-	hg log -R $ROOT_DIR/$project/raw --template '<tr><td><a href="/'$project'/commit/{node}.html">{node|short}</a></td><td>{author}</td><td>{date|isodate}</td><td>{desc}</td><td>{tags}</td></tr>' $dir
+	hg log -R $REPO_DIR/$project --template '<tr><td><a href="/'$project'/commit/{node}.html">{node|short}</a></td><td>{author}</td><td>{date|isodate}</td><td>{desc}</td><td>{tags}</td></tr>' $dir
     echo "</table>"
     
     footer
@@ -262,7 +266,7 @@ function fileContent
 
     local project=$1
     local name=$2
-    local file=$ROOT_DIR/$project/raw/$name
+    local file=$REPO_DIR/$project/$name
     local path
 
     header `basename $name`
@@ -306,7 +310,7 @@ function fileHistory
 {
 	local project=$1
 	local name=$2
-	local file=$ROOT_DIR/$project/raw/$name
+	local file=$REPO_DIR/$project/$name
 	local path
 	
     header `basename $name`
@@ -341,7 +345,7 @@ EOF
     cat << EOF
 <table class="table"><tr><th>Commit</th><th>User</th><th>Date</th><th>Summary</th><th>Tag</th></tr>
 EOF
-	hg log -R $ROOT_DIR/$project/raw --template '<tr><td><a href="/'$project'/commit/{node}.html">{node|short}</a></td><td>{author}</td><td>{date|isodate}</td><td>{desc}</td><td>{tags}</td></tr>' $file
+	hg log -R $REPO_DIR/$project --template '<tr><td><a href="/'$project'/commit/{node}.html">{node|short}</a></td><td>{author}</td><td>{date|isodate}</td><td>{desc}</td><td>{tags}</td></tr>' $file
     echo "</table>"
     
     footer
@@ -369,7 +373,6 @@ function pathSegments
 function commit
 {
 	local project=$1
-	local dir=$ROOT_DIR/$project
 	local commit=$2
 	
     header $name
@@ -385,7 +388,7 @@ EOF
     cat << EOF
 EOF
 	echo "<pre><code>"
-	hg log -r $commit -p -R $dir
+	hg log -r $commit -p -R $REPO_DIR/$project
 	echo "</code></pre>"
     
     footer
@@ -406,7 +409,7 @@ EOF
     
 cat << EOF
 
-<div class="well">Clone this repository with <code>hg clone http://$DOMAIN/$project</code></div>
+<div class="well">Clone this repository with <code>hg clone static-http://$DOMAIN/$project</code></div>
 <ul class="nav nav-pills nav-stacked">
 <li role="presentation"><a href="/$project/$project.tar.gz">Download Tarball</a></li>
 <li role="presentation"><a href="/$project/changelog.txt">Changelog</a></li>
@@ -414,12 +417,12 @@ cat << EOF
 </li>
 EOF
 
-	if	[ -f $ROOT_DIR/$project/raw/README ]; then
+	if	[ -f $REPO_DIR/$project/README ]; then
 		cat << EOF
 <div class="panel panel-default">
   <div class="panel-body">
 EOF
-    	cat $ROOT_DIR/$project/raw/README
+    	cat $REPO_DIR/$project/README
 		cat << EOF
   </div>
 </div>
@@ -435,10 +438,10 @@ EOF
 function project
 {
     local name=$1
-    local dir=$ROOT_DIR/$name
+    local dir=$OUT_DIR/$name
 
     if	[ -f $dir/$name.tar.gz ]; then
-        if	[ `hg log -R $dir -l 1 --template '{date(date,"%s")}'` -lt `stat -c "%Y" $dir/$name.tar.gz ` ]; then
+        if	[ `hg log -R $REPO_DIR/$name -l 1 --template '{date(date,"%s")}'` -lt `stat -c "%Y" $dir/$name.tar.gz ` ]; then
 	    #echo "$name is actual"
 	    continue;
 	fi
@@ -452,20 +455,22 @@ function project
     rm -rf $dir/src
     mkdir $dir/src
 
-    hg clone -q $dir $dir/raw
+    hg clone -q $REPO_DIR/$name $dir/raw
+    # Clean .hg
+    rm -rf $dir/raw/.hg
 
 
 
     projectSummary $name > $dir/index.html
 
-    for f in `cd $dir/raw && find . -type d ! -path "*/.hg*"`; do
+    for f in `cd $dir/raw && find . -type d`; do
 
         mkdir -p $dir/src/$f
 	folderContent $name $f > $dir/src/$f/index.html
 	folderHistory $name $f > $dir/src/$f/history.html
     done
 
-    for f in `cd $dir/raw && find . -type f ! -path "*/.hg*"`; do
+    for f in `cd $dir/raw && find . -type f`; do
 	fileContent $name $f > $dir/src/$f-content.html
 	fileHistory $name $f > $dir/src/$f-history.html
     done
@@ -473,47 +478,43 @@ function project
 
     #rm -rf $dir/commit
     mkdir -p $dir/commit
-    for c in `hg log -R $dir --template '{node}\n'`; do
+    for c in `hg log -R $REPO_DIR/$name --template '{node}\n'`; do
 	if [ ! -f $dir/commit/$c.html ]; then
 	    commit $name $c > $dir/commit/$c.html
 	fi
     done
 
-    # Clean .hg
-    rm -rf $dir/raw/.hg
 
     # create static archive (without .hg)
     `cd $dir/raw && tar cfz ../$name.tar.gz *`
-    hg -R $dir log --style changelog > $dir/changelog.txt
+    hg -R $REPO_DIR/$name log --style changelog > $dir/changelog.txt
 }
 
 
 
 
 # Create start page with all projects
-rootIndex > $ROOT_DIR/index.html
+rootIndex > $OUT_DIR/index.html
 
 
-rm $ROOT_DIR/.htaccess
-echo "# generated" > $ROOT_DIR/.htaccess
+rm -f $OUT_DIR/.htaccess
+echo "# generated" > $OUT_DIR/.htaccess
 
 # Loop over all projects
-for f in $ROOT_DIR/*; do
+for f in $REPO_DIR/*; do
 
-	project=`basename $f`
+    project=`basename $f`
 	
     # is this a Mercurial archive?
     if [ ! -d $f/.hg ]; then
+		# not Mercurial versioned 
 		continue;
     fi
 
-    # Serve the RAW files as text/plain (not all, images should stay images)
-    echo "AddType text/plain .java .php .txt .xml .json" > $ROOT_DIR/$project/raw/.htaccess
-
-    name=`basename $f`
-
     # Call the project
-    project $name
+    project $project
 
+    # Serve the RAW files as text/plain (not all, images should stay images)
+    echo "AddType text/plain .java .php .txt .xml .json" > $OUT_DIR/$project/raw/.htaccess
 done
 
